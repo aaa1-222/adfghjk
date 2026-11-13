@@ -1,0 +1,36 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI × 时间｜统计后台</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#eaf4ff,#f5edff,#fff5df);color:#543f47}
+.wrap{max-width:1080px;margin:auto;padding:24px 14px 50px}.panel{background:#fffdf8e8;border:3px solid #82656e;border-radius:26px;padding:22px;box-shadow:0 9px 0 #72576212}
+h1{margin:4px 0}.muted{color:#7d6a70}button{border:2px solid #82656e;border-radius:13px;background:#f5dc9f;padding:9px 14px;font-weight:800;cursor:pointer}
+.head{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}.status{margin:14px 0;padding:10px;border:2px dashed #b99fa7;border-radius:13px;background:white}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card,.section{background:white;border:2px solid #82656e;border-radius:18px;padding:15px;margin-top:12px}
+.num{font-size:28px;font-weight:900}.label{font-size:12px;color:#7d6a70}.types{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.type{padding:12px;border:2px dashed #baa6ad;border-radius:14px}.type strong{font-size:22px;display:block}
+.bar{height:16px;border:2px solid #82656e;border-radius:99px;overflow:hidden;background:#e8ddff}.bar>div{height:100%;background:#8db7ff}
+.q{display:grid;grid-template-columns:190px 1fr 95px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed #dccfd3;font-size:13px}.q:last-child{border:0}
+@media(max-width:720px){.grid,.types{grid-template-columns:1fr 1fr}.q{grid-template-columns:1fr}}
+</style></head><body><div class="wrap"><div class="panel">
+<div class="head"><div><div class="muted">匿名汇总统计</div><h1>AI × 时间测试后台</h1><div class="muted">只显示汇总，不显示个人单条答案。</div></div><button id="refresh">↻ 刷新</button></div>
+<div id="status" class="status">正在读取…</div>
+<div class="grid"><div class="card"><div class="label">总测试人数</div><div id="total" class="num">—</div></div><div class="card"><div class="label">总体 A</div><div id="ap" class="num">—</div></div><div class="card"><div class="label">总体 B</div><div id="bp" class="num">—</div></div><div class="card"><div class="label">最近更新</div><div id="last">—</div></div></div>
+<div class="section"><h2>四种结果分布</h2><div class="types"><div class="type">明显时间回收型<strong id="t1">—</strong></div><div class="type">偏时间回收型<strong id="t2">—</strong></div><div class="type">偏任务再投入型<strong id="t3">—</strong></div><div class="type">明显任务再投入型<strong id="t4">—</strong></div></div></div>
+<div class="section"><h2>15 道题 A / B 比例</h2><div id="qs"></div></div>
+</div></div>
+<script>
+const U="https://vgrdhoajyraohylehebq.supabase.co",K="sb_publishable_mbXJHhPJVYJES8NTRrlhJg_xM2pmBKr",N=["提前完成", "已经能交", "周末空档", "小组协作", "吃饭时间", "新项目来了", "没有 DDL", "AI 又给了更好的版本", "朋友突然约你", "课程汇报", "编程调试", "阅读任务", "消息提醒", "阶段性完成", "AI 会员到期前"];
+async function load(){
+ const s=document.getElementById("status");s.textContent="正在读取…";
+ try{
+  const r=await fetch(U+"/rest/v1/rpc/get_public_stats",{method:"POST",headers:{apikey:K,"Content-Type":"application/json"},body:"{}"});
+  if(!r.ok)throw new Error(await r.text());const d=await r.json();
+  total.textContent=d.total_responses||0;ap.textContent=Number(d.a_percent||0).toFixed(1)+"%";bp.textContent=Number(d.b_percent||0).toFixed(1)+"%";
+  last.textContent=d.last_updated?new Date(d.last_updated).toLocaleString():"暂无";
+  const t=d.type_counts||{};t1.textContent=t.clear_a||0;t2.textContent=t.lean_a||0;t3.textContent=t.lean_b||0;t4.textContent=t.clear_b||0;
+  qs.innerHTML=(d.questions||[]).map((x,i)=>{const a=+x.a||0,b=+x.b||0,n=a+b,p=n?Math.round(a/n*100):0;return `<div class="q"><div>Q${i+1} · ${N[i]}</div><div class="bar"><div style="width:${p}%"></div></div><div>A ${p}% · B ${100-p}%</div></div>`}).join("");
+  s.textContent="✓ 已更新，共 "+(d.total_responses||0)+" 份测试。";
+ }catch(e){console.error(e);s.textContent="读取失败：请先在 Supabase 运行 setup_all.sql。";}
+}
+refresh.onclick=load;load();setInterval(load,30000);
+</script></body></html>
